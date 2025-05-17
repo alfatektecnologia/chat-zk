@@ -1,7 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useAbstraxionAccount } from '@burnt-labs/abstraxion';
+import { useState, useEffect, useCallback } from "react";
+import { useAbstraxionAccount } from "@burnt-labs/abstraxion";
+import FaceRecognition from "@/components/face-recognition";
 
 interface Contact {
   id: string;
@@ -17,7 +18,11 @@ interface InviteFormProps {
   currentUserName: string;
 }
 
-function InviteForm({ initialEmail, onClose, currentUserName }: InviteFormProps) {
+function InviteForm({
+  initialEmail,
+  onClose,
+  currentUserName,
+}: InviteFormProps) {
   const [email, setEmail] = useState(initialEmail);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,26 +30,31 @@ function InviteForm({ initialEmail, onClose, currentUserName }: InviteFormProps)
 
   const handleInvite = async () => {
     if (!email.trim()) return;
-    
+
     setLoading(true);
     setError(null);
     setSuccess(null);
 
     try {
-      const response = await fetch(`/api/contact/invite?user_name=${encodeURIComponent(currentUserName)}&email=${encodeURIComponent(email)}`, {
-        method: 'POST',
-      });
+      const response = await fetch(
+        `/api/contact/invite?user_name=${encodeURIComponent(
+          currentUserName
+        )}&email=${encodeURIComponent(email)}`,
+        {
+          method: "POST",
+        }
+      );
 
       if (!response.ok) {
-        throw new Error('Failed to send invite');
+        throw new Error("Failed to send invite");
       }
 
-      setSuccess('Invitation sent successfully!');
+      setSuccess("Invitation sent successfully!");
       setTimeout(() => {
         onClose();
       }, 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send invite');
+      setError(err instanceof Error ? err.message : "Failed to send invite");
     } finally {
       setLoading(false);
     }
@@ -75,7 +85,7 @@ function InviteForm({ initialEmail, onClose, currentUserName }: InviteFormProps)
             disabled={loading}
             className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors disabled:opacity-50"
           >
-            {loading ? 'Sending...' : 'Send Invite'}
+            {loading ? "Sending..." : "Send Invite"}
           </button>
         </div>
       </div>
@@ -88,56 +98,63 @@ interface ContactPageProps {
 }
 
 export default function ContactPage({ onContactSelect }: ContactPageProps) {
-  const { data: { bech32Address } } = useAbstraxionAccount();
+  const {
+    data: { bech32Address },
+  } = useAbstraxionAccount();
   const [addedByOthers, setAddedByOthers] = useState<Contact[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [newContactIdentifier, setNewContactIdentifier] = useState('');
+  const [newContactIdentifier, setNewContactIdentifier] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showInviteForm, setShowInviteForm] = useState(false);
-  const [currentUserName, setCurrentUserName] = useState('');
+  const [currentUserName, setCurrentUserName] = useState("");
+  const [showFaceAuth, setShowFaceAuth] = useState(false);
 
   const fetchUserName = async () => {
     if (!bech32Address) return;
     try {
       const response = await fetch(`/api/user/account/${bech32Address}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch user name');
+        throw new Error("Failed to fetch user name");
       }
       const data = await response.json();
       setCurrentUserName(data.user_name);
-      console.log('Current user name:', data.user_name);
+      console.log("Current user name:", data.user_name);
     } catch (err) {
-      console.error('Error fetching user name:', err);
+      console.error("Error fetching user name:", err);
     }
   };
 
   const fetchContacts = useCallback(async () => {
     if (!bech32Address) return;
-    
+
     try {
-      const addedRes = await fetch(`/api/contact/added_by_others?account_id=${bech32Address}`);
+      const addedRes = await fetch(
+        `/api/contact/added_by_others?account_id=${bech32Address}`
+      );
       if (addedRes.ok) {
         setAddedByOthers(await addedRes.json());
       }
-    } catch {};
+    } catch {}
 
     try {
-      const response = await fetch(`/api/contact/list?account_id=${bech32Address}`);
+      const response = await fetch(
+        `/api/contact/list?account_id=${bech32Address}`
+      );
       if (!response.ok) {
-        throw new Error('Failed to fetch contacts');
+        throw new Error("Failed to fetch contacts");
       }
       const data = await response.json();
-      console.log('Received contacts:', data);
+      console.log("Received contacts:", data);
       setContacts(data);
     } catch (err) {
-      setError('Failed to load contacts');
-      console.error('Error fetching contacts:', err);
+      setError("Failed to load contacts");
+      console.error("Error fetching contacts:", err);
     } finally {
       setLoading(false);
     }
-  }, [bech32Address]); 
+  }, [bech32Address]);
 
   useEffect(() => {
     fetchContacts();
@@ -149,12 +166,19 @@ export default function ContactPage({ onContactSelect }: ContactPageProps) {
 
   const handleAddContact = async () => {
     if (!newContactIdentifier.trim() || !bech32Address) return;
+    // Show face authentication before proceeding
+    setShowFaceAuth(true);
+  };
+
+  const handleFaceAuthSuccess = async () => {
+    setShowFaceAuth(false);
+    setError(null);
 
     try {
-      const response = await fetch('/api/contact/add_by_identifier', {
-        method: 'POST',
+      const response = await fetch("/api/contact/add_by_identifier", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           account_id: bech32Address,
@@ -164,20 +188,22 @@ export default function ContactPage({ onContactSelect }: ContactPageProps) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        if (errorData.error === 'Contact not found') {
-          setError(`This contact ${newContactIdentifier} is not at ChatPay Go yet!`);
+        if (errorData.error === "Contact not found") {
+          setError(
+            `This contact ${newContactIdentifier} is not at ChatPay Go yet!`
+          );
           return;
         }
-        throw new Error(errorData.error || 'Failed to add contact');
+        throw new Error(errorData.error || "Failed to add contact");
       }
 
-      setSuccess('Contact added successfully');
-      setNewContactIdentifier('');
-      fetchContacts(); // Refresh the contact list
-      fetchUserName(); 
+      setSuccess("Contact added successfully");
+      setNewContactIdentifier("");
+      fetchContacts();
+      fetchUserName();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add contact');
-      console.error('Error adding contact:', err);
+      setError(err instanceof Error ? err.message : "Failed to add contact");
+      console.error("Error adding contact:", err);
     }
   };
 
@@ -191,20 +217,23 @@ export default function ContactPage({ onContactSelect }: ContactPageProps) {
     setError(null);
     setSuccess(null);
     try {
-      const response = await fetch('/api/contact/add_by_identifier', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ account_id: bech32Address, identifier: contact.account_id }),
+      const response = await fetch("/api/contact/add_by_identifier", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          account_id: bech32Address,
+          identifier: contact.account_id,
+        }),
       });
       if (!response.ok) {
         const errData = await response.json();
-        throw new Error(errData.error || 'Failed to add contact');
+        throw new Error(errData.error || "Failed to add contact");
       }
       setSuccess(`Added ${contact.user_name} to contacts`);
       // Refresh both contact lists
       fetchContacts();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add contact');
+      setError(err instanceof Error ? err.message : "Failed to add contact");
     }
   };
 
@@ -241,10 +270,18 @@ export default function ContactPage({ onContactSelect }: ContactPageProps) {
               Add Contact
             </button>
           </div>
+          {showFaceAuth && (
+            <FaceRecognition
+              onSuccess={handleFaceAuthSuccess}
+              onCancel={() => setShowFaceAuth(false)}
+              purpose="adding a new contact"
+            />
+          )}
+
           {error && (
             <div className="mt-2">
               <p className="text-red-500">{error}</p>
-              {error.includes('is not at ChatPay Go yet') && (
+              {error.includes("is not at ChatPay Go yet") && (
                 <button
                   onClick={() => setShowInviteForm(true)}
                   className="text-blue-400 hover:text-blue-300 underline mt-2"
@@ -254,14 +291,14 @@ export default function ContactPage({ onContactSelect }: ContactPageProps) {
               )}
             </div>
           )}
-          {success && (
-            <p className="text-green-500 mt-2">{success}</p>
-          )}
+          {success && <p className="text-green-500 mt-2">{success}</p>}
         </div>
 
         {showInviteForm && (
           <InviteForm
-            initialEmail={newContactIdentifier.includes('@') ? newContactIdentifier : ''}
+            initialEmail={
+              newContactIdentifier.includes("@") ? newContactIdentifier : ""
+            }
             onClose={() => setShowInviteForm(false)}
             currentUserName={currentUserName}
           />
@@ -273,7 +310,10 @@ export default function ContactPage({ onContactSelect }: ContactPageProps) {
             <h2 className="text-xl font-semibold mb-4">You were added by:</h2>
             <ul className="space-y-2">
               {addedByOthers.map((contact) => (
-                <li key={contact.id} className="flex justify-between items-center">
+                <li
+                  key={contact.id}
+                  className="flex justify-between items-center"
+                >
                   <span>{contact.user_name}</span>
                   <button
                     onClick={() => handleAddFromOthers(contact)}
@@ -286,7 +326,7 @@ export default function ContactPage({ onContactSelect }: ContactPageProps) {
             </ul>
           </div>
         )}
-        
+
         <div className="bg-blue-800 rounded-lg overflow-hidden">
           <table className="w-full">
             <thead>
@@ -306,13 +346,13 @@ export default function ContactPage({ onContactSelect }: ContactPageProps) {
                 </tr>
               ) : (
                 contacts.map((contact) => (
-                  <tr 
-                    key={contact.id} 
+                  <tr
+                    key={contact.id}
                     className="border-b border-blue-700 hover:bg-blue-700 cursor-pointer transition-colors"
                     onClick={() => handleContactClick(contact)}
                   >
                     <td className="p-4">{contact.user_name}</td>
-                    <td className="p-4">{contact.email || '-'}</td>
+                    <td className="p-4">{contact.email || "-"}</td>
                     <td className="p-4">{contact.account_id}</td>
                     <td className="p-4">
                       {new Date(contact.created_at).toLocaleDateString()}

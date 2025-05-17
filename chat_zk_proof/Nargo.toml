@@ -1,0 +1,6 @@
+[package]
+name = "chat_zk_proof"
+type = "bin"
+authors = [""]
+
+[dependencies]
